@@ -1,0 +1,6 @@
+/tmp
+/build
+/.direnv
+/result
+
+.env
