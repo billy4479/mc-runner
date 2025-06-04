@@ -18,6 +18,7 @@ pkgs.mkShell {
 
   nativeBuildInputs = with pkgs; [
     go
+    sqlc
 
     nodejs_latest
     nodePackages.pnpm

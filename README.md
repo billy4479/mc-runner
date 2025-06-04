@@ -75,7 +75,7 @@ Server closes only after a timeout.
 
 - id
 - name
-- mc_name (nullable)
+- player_id (nullable, foreign key of `players`)
 - tg_id (nullable)
 
 ### players
@@ -87,7 +87,12 @@ Server closes only after a timeout.
 
 ### token_store
 
-- token
-- expires
+- token (index, raw bytes)
+- expires (date)
 - type (enum of `refresh_token`, `login_token`, `register_token`, `link_tg_token`)
-- user_id
+- user_id (foreign key of `users`)
+
+### metadata
+
+- key (string)
+- value (string)

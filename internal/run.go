@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"database/sql"
 	"fmt"
 
 	"github.com/labstack/echo/v4"
@@ -13,6 +14,11 @@ var BuildMode string = "debug"
 var Debug bool = true
 
 func Run(config *Config) error {
+	db, err := sql.Open("sqlite3", config.DbPath)
+	if err != nil {
+		return fmt.Errorf("open db: %w", err)
+	}
+
 	e := echo.New()
 
 	if BuildMode == "release" {
@@ -35,9 +41,16 @@ func Run(config *Config) error {
 	fmt.Println("Frontend at", FrontendPath)
 
 	api := e.Group("/api")
+	api.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			c.Set("db", db)
+			return next(c)
+		}
+	})
+
 	addAPIRoutes(config, api)
 
-	err := e.Start(":4479")
+	err = e.Start(":4479")
 	if err != nil {
 		return fmt.Errorf("serve: %w", err)
 	}
