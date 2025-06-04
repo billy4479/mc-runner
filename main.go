@@ -2,24 +2,15 @@ package main
 
 import (
 	"fmt"
-	"net/http"
+	"os"
 
-	"github.com/labstack/echo/v4"
+	"github.com/billy4479/mc-runner/cmd"
 )
 
 func main() {
-	e := echo.New()
-
-	e.HideBanner = true
-	e.Debug = true
-
-	e.GET("/api/mc-hook", func(c echo.Context) error {
-		for k, v := range c.QueryParams() {
-			fmt.Printf("%s = %s\n", k, v[0])
-		}
-
-		return c.NoContent(http.StatusOK)
-	})
-
-	e.Start(":4479")
+	err := cmd.Run()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 }

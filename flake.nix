@@ -14,45 +14,16 @@
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
+        inherit (pkgs) callPackage;
       in
       {
         packages = rec {
-          mc-runner = pkgs.callPackage (
-            { buildGoModule, ... }:
-            buildGoModule {
-              src = ./.;
-              pname = "mc-runner";
-              version = "1.0.0";
-              vendorHash = "sha256-P/wg/jogynsre9NBvSkZ6ax8m1LuzTF4Ec84ayin9XY=";
-            }
-          ) { };
-          docker-image = pkgs.dockerTools.buildLayeredImage {
-            name = "mc-runner";
-            tag = "latest";
-
-            contents = [
-              pkgs.dockerTools.caCertificates
-              mc-runner
-            ];
-
-            config = {
-              Cmd = [ "/bin/mc-runner" ];
-            };
-          };
+          frontend = callPackage (import ./nix/frontend.nix) { };
+          mc-runner = callPackage (import ./nix/mc-runner.nix) { inherit frontend; };
+          docker-image = callPackage (import ./nix/docker.nix) { inherit mc-runner; };
         };
 
-        devShells.default = pkgs.mkShell {
-          packages = with pkgs; [
-            cloudflared
-            podman
-            turso-cli
-            air
-
-            gopls
-            golangci-lint
-          ];
-          nativeBuildInputs = with pkgs; [ go ];
-        };
+        devShells.default = (import ./nix/shell.nix pkgs);
       }
     );
 }
