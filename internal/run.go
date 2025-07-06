@@ -1,11 +1,14 @@
 package internal
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
+	"github.com/billy4479/mc-runner/repository"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 var FrontendPath string = "frontend/dist"
@@ -33,7 +36,9 @@ func Run(config *Config) error {
 	e.Use(middleware.Secure())
 
 	if Debug {
-		e.Use(middleware.CORS())
+		e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+			AllowOrigins: []string{"http://localhost:5173"},
+		}))
 	}
 
 	e.Static("/", FrontendPath)
@@ -43,7 +48,9 @@ func Run(config *Config) error {
 	api := e.Group("/api")
 	api.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
+			c.Set("repo", repository.New(db))
 			c.Set("db", db)
+			c.Set("db_ctx", context.TODO())
 			return next(c)
 		}
 	})

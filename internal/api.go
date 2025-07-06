@@ -12,6 +12,9 @@ func addAPIRoutes(config *Config, api *echo.Group) {
 		return c.String(http.StatusOK, "pong")
 	})
 
+	auth := api.Group("/auth")
+	addAuthRoutes(auth)
+
 	api.GET("/hooks/mc", func(c echo.Context) error {
 		for k, v := range c.QueryParams() {
 			fmt.Printf("%s = %s\n", k, v[0])

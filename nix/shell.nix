@@ -8,6 +8,9 @@ pkgs.mkShell {
 
     gopls
     golangci-lint
+    (go-migrate.overrideAttrs (oldAttrs: {
+      tags = [ "sqlite3" ];
+    }))
 
     typescript-language-server
     svelte-language-server
@@ -22,5 +25,7 @@ pkgs.mkShell {
 
     nodejs_latest
     nodePackages.pnpm
+
+    sqlitebrowser
   ];
 }

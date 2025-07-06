@@ -7,7 +7,22 @@ package repository
 
 import (
 	"context"
+	"database/sql"
+	"time"
 )
+
+const createUser = `-- name: CreateUser :one
+INSERT INTO users (name)
+VALUES (NULL)
+RETURNING id
+`
+
+func (q *Queries) CreateUser(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, createUser)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
 
 const getMetadata = `-- name: GetMetadata :one
 SELECT value FROM metadata
@@ -20,4 +35,116 @@ func (q *Queries) GetMetadata(ctx context.Context, key string) (string, error) {
 	var value string
 	err := row.Scan(&value)
 	return value, err
+}
+
+const getUserFromToken = `-- name: GetUserFromToken :one
+SELECT users.id, users.name, users.player_id, users.tg_id, token_store.expires FROM users
+INNER JOIN token_store ON token_store.user_id = users.id
+WHERE token_store.token = ? AND token_store.type = ?
+`
+
+type GetUserFromTokenParams struct {
+	Token []byte
+	Type  string
+}
+
+type GetUserFromTokenRow struct {
+	User    User
+	Expires time.Time
+}
+
+func (q *Queries) GetUserFromToken(ctx context.Context, arg GetUserFromTokenParams) (GetUserFromTokenRow, error) {
+	row := q.db.QueryRowContext(ctx, getUserFromToken, arg.Token, arg.Type)
+	var i GetUserFromTokenRow
+	err := row.Scan(
+		&i.User.ID,
+		&i.User.Name,
+		&i.User.PlayerID,
+		&i.User.TgID,
+		&i.Expires,
+	)
+	return i, err
+}
+
+const removeTokenById = `-- name: RemoveTokenById :exec
+DELETE FROM token_store
+WHERE user_id = ? and type = ?
+`
+
+type RemoveTokenByIdParams struct {
+	UserID int64
+	Type   string
+}
+
+func (q *Queries) RemoveTokenById(ctx context.Context, arg RemoveTokenByIdParams) error {
+	_, err := q.db.ExecContext(ctx, removeTokenById, arg.UserID, arg.Type)
+	return err
+}
+
+const removeTokenExact = `-- name: RemoveTokenExact :exec
+DELETE FROM token_store
+WHERE token = ? and user_id = ?
+`
+
+type RemoveTokenExactParams struct {
+	Token  []byte
+	UserID int64
+}
+
+func (q *Queries) RemoveTokenExact(ctx context.Context, arg RemoveTokenExactParams) error {
+	_, err := q.db.ExecContext(ctx, removeTokenExact, arg.Token, arg.UserID)
+	return err
+}
+
+const setMetadata = `-- name: SetMetadata :exec
+INSERT OR REPLACE INTO metadata (key, value)
+VALUES( ?, ? )
+`
+
+type SetMetadataParams struct {
+	Key   string
+	Value string
+}
+
+func (q *Queries) SetMetadata(ctx context.Context, arg SetMetadataParams) error {
+	_, err := q.db.ExecContext(ctx, setMetadata, arg.Key, arg.Value)
+	return err
+}
+
+const setToken = `-- name: SetToken :exec
+INSERT INTO token_store (token, expires, type, user_id)
+VALUES (?, ?, ?, ?)
+`
+
+type SetTokenParams struct {
+	Token   []byte
+	Expires time.Time
+	Type    string
+	UserID  int64
+}
+
+func (q *Queries) SetToken(ctx context.Context, arg SetTokenParams) error {
+	_, err := q.db.ExecContext(ctx, setToken,
+		arg.Token,
+		arg.Expires,
+		arg.Type,
+		arg.UserID,
+	)
+	return err
+}
+
+const setUserName = `-- name: SetUserName :exec
+UPDATE users
+SET name = ?
+WHERE id = ?
+`
+
+type SetUserNameParams struct {
+	Name sql.NullString
+	ID   int64
+}
+
+func (q *Queries) SetUserName(ctx context.Context, arg SetUserNameParams) error {
+	_, err := q.db.ExecContext(ctx, setUserName, arg.Name, arg.ID)
+	return err
 }

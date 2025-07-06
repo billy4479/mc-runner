@@ -16,7 +16,7 @@ type Metadata struct {
 
 type Player struct {
 	ID         int64
-	InGameName string
+	InGameName sql.NullString
 	IsOnline   bool
 	IsBot      bool
 }
@@ -30,7 +30,7 @@ type TokenStore struct {
 
 type User struct {
 	ID       int64
-	Name     string
+	Name     sql.NullString
 	PlayerID sql.NullInt64
 	TgID     sql.NullInt64
 }
