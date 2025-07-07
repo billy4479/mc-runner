@@ -1,16 +1,33 @@
-import { defineConfig } from "vite";
+import { defineConfig, UserConfig } from "vite";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import tailwindcss from "@tailwindcss/vite";
 
 import path from "path";
 
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [svelte(), tailwindcss()],
-  resolve: {
-    alias: {
-      $: path.resolve(__dirname, "./src"),
-      $lib: path.resolve(__dirname, "./src/lib"),
+export default defineConfig(({ command }) => {
+  const configBase = {
+    plugins: [svelte(), tailwindcss()],
+    resolve: {
+      alias: {
+        $: path.resolve(__dirname, "./src"),
+        $lib: path.resolve(__dirname, "./src/lib"),
+      },
     },
-  },
+  } satisfies UserConfig;
+
+  if (command === "serve") {
+    const devConfig: UserConfig = configBase;
+    devConfig.server = {
+      proxy: {
+        "/api": {
+          target: "http://localhost:4479",
+          changeOrigin: true,
+        },
+      },
+    };
+    return devConfig;
+  } else {
+    return configBase;
+  }
 });

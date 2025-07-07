@@ -13,6 +13,10 @@ SELECT sqlc.embed(users), token_store.expires FROM users
 INNER JOIN token_store ON token_store.user_id = users.id
 WHERE token_store.token = ? AND token_store.type = ?;
 
+-- name: GetAllTokensForUser :many
+SELECT * FROM token_store
+WHERE user_id = ?;
+
 -- name: SetToken :exec
 INSERT INTO token_store (token, expires, type, user_id)
 VALUES (?, ?, ?, ?);

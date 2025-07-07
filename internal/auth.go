@@ -2,11 +2,11 @@ package internal
 
 import (
 	"context"
-	"crypto/internal/fips140/check"
 	"crypto/rand"
 	"crypto/sha3"
 	"database/sql"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/http"
@@ -37,6 +37,16 @@ func authMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 			return echo.NewHTTPError(http.StatusUnauthorized, err)
 		}
 
+		// Set again the cookie expiration time to the maximum possible
+		c.SetCookie(&http.Cookie{
+			Name:     "auth",
+			Secure:   true,
+			HttpOnly: true,
+			Value:    cookie.Value,
+			Expires:  time.Now().Add(400 * 24 * time.Hour),
+			Path:     "/api",
+		})
+
 		c.Set("user", user)
 		return next(c)
 	}
@@ -62,18 +72,19 @@ func generateRandomToken() (tokenB64 string, hash [32]byte, err error) {
 	}
 
 	hash = sha3.Sum256(token)
-	tokenB64 = base64.RawStdEncoding.EncodeToString(token)
+	tokenB64 = base64.RawURLEncoding.EncodeToString(token)
+	fmt.Println(hex.EncodeToString(token))
 	return
 }
 
 var (
-	ExpiredTokenError = errors.New("token expired")
+	ErrExpiredToken = errors.New("token expired")
 )
 
 func getUserFromTokenChecked(repo *repository.Queries, ctx context.Context, hash []byte, tokenType string) (*repository.User, error) {
 	userAndExpiration, err := repo.GetUserFromToken(ctx, repository.GetUserFromTokenParams{
-		Token: hash[:],
-		Type:  "auth_token",
+		Token: hash,
+		Type:  tokenType,
 	})
 
 	if err != nil {
@@ -85,7 +96,7 @@ func getUserFromTokenChecked(repo *repository.Queries, ctx context.Context, hash
 	}
 
 	if userAndExpiration.Expires.After(time.Now()) {
-		return nil, fmt.Errorf("%w: %s", ExpiredTokenError, tokenType)
+		return nil, fmt.Errorf("%w: %s", ErrExpiredToken, tokenType)
 	}
 
 	return &userAndExpiration.User, nil
@@ -162,7 +173,7 @@ func addAuthRoutes(g *echo.Group) {
 				return echo.NewHTTPError(http.StatusNotFound, err)
 			}
 
-			if errors.Is(err, ExpiredTokenError) {
+			if errors.Is(err, ErrExpiredToken) {
 				return echo.NewHTTPError(http.StatusUnauthorized, err)
 			}
 
@@ -173,6 +184,7 @@ func addAuthRoutes(g *echo.Group) {
 			ID: user.ID,
 			Name: sql.NullString{
 				String: body.Name,
+				Valid:  true,
 			},
 		})
 
@@ -200,11 +212,13 @@ func addAuthRoutes(g *echo.Group) {
 			Secure:   true,
 			HttpOnly: true,
 			Value:    tokenB64,
+			Path:     "/api",
+			Expires:  time.Now().Add(400 * 24 * time.Hour), // This is the maximum expiration time
 		})
 
 		err = repo.RemoveTokenById(ctx, repository.RemoveTokenByIdParams{
 			UserID: user.ID,
-			Type:   "auth_token",
+			Type:   "invitation_token",
 		})
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, err)
@@ -212,4 +226,9 @@ func addAuthRoutes(g *echo.Group) {
 
 		return c.JSON(http.StatusCreated, echo.Map{"auth_token": tokenB64})
 	})
+
+	g.GET("/me", func(c echo.Context) error {
+		user := c.Get("user").(*repository.User)
+		return c.JSON(http.StatusOK, user)
+	}, authMiddleware)
 }

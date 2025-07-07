@@ -24,6 +24,39 @@ func (q *Queries) CreateUser(ctx context.Context) (int64, error) {
 	return id, err
 }
 
+const getAllTokensForUser = `-- name: GetAllTokensForUser :many
+SELECT token, expires, type, user_id FROM token_store
+WHERE user_id = ?
+`
+
+func (q *Queries) GetAllTokensForUser(ctx context.Context, userID int64) ([]TokenStore, error) {
+	rows, err := q.db.QueryContext(ctx, getAllTokensForUser, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TokenStore
+	for rows.Next() {
+		var i TokenStore
+		if err := rows.Scan(
+			&i.Token,
+			&i.Expires,
+			&i.Type,
+			&i.UserID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getMetadata = `-- name: GetMetadata :one
 SELECT value FROM metadata
 WHERE key = ?
