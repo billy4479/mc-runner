@@ -7,6 +7,8 @@ type Config struct {
 	McSecret     string `required:"true" split_words:"true"`
 	WorldDir     string `required:"true" split_words:"true"`
 	DbPath       string `required:"true" split_words:"true"`
+	Port         int    `required:"true" split_words:"true"`
+	VitePort     int    `required:"true" split_words:"true"`
 
 	// GhHookSecret string `split_words:"true"`
 	// TgToken      string `split_words:"true"`

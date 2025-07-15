@@ -11,6 +11,7 @@ pkgs.mkShell {
     (go-migrate.overrideAttrs (oldAttrs: {
       tags = [ "sqlite3" ];
     }))
+    delve
 
     typescript-language-server
     svelte-language-server

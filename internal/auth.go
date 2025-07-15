@@ -6,7 +6,6 @@ import (
 	"crypto/sha3"
 	"database/sql"
 	"encoding/base64"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/http"
@@ -73,7 +72,6 @@ func generateRandomToken() (tokenB64 string, hash [32]byte, err error) {
 
 	hash = sha3.Sum256(token)
 	tokenB64 = base64.RawURLEncoding.EncodeToString(token)
-	fmt.Println(hex.EncodeToString(token))
 	return
 }
 
