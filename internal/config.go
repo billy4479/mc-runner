@@ -9,6 +9,7 @@ type Config struct {
 	DbPath       string `required:"true" split_words:"true"`
 	Port         int    `required:"true" split_words:"true"`
 	VitePort     int    `required:"true" split_words:"true"`
+	Environment  string `default:"release"`
 
 	// GhHookSecret string `split_words:"true"`
 	// TgToken      string `split_words:"true"`

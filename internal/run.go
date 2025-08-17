@@ -5,23 +5,20 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/billy4479/mc-runner/repository"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
 var FrontendPath string = "frontend/dist"
-var BuildMode string = "debug"
-
-var Debug bool = true
 
 func Run(config *Config) error {
+	debug := config.Environment == "debug"
+
 	db, err := sql.Open("sqlite3", config.DbPath)
 	if err != nil {
 		return fmt.Errorf("open db: %w", err)
@@ -29,19 +26,9 @@ func Run(config *Config) error {
 
 	e := echo.New()
 
-	if BuildMode == "release" {
-		Debug = false
-	}
-
 	e.HideBanner = true
 	e.HidePort = true
-	e.Debug = Debug
-
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	if Debug {
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-	}
+	e.Debug = debug
 
 	// e.Use(middleware.Recover())
 	e.Use(middleware.Secure())
@@ -87,7 +74,7 @@ func Run(config *Config) error {
 		}
 
 		msg := echo.Map{"status": code}
-		if Debug {
+		if debug {
 			msg["error"] = err.Error()
 		}
 		err = c.JSON(code, msg)
@@ -96,7 +83,7 @@ func Run(config *Config) error {
 		}
 	}
 
-	if Debug {
+	if debug {
 		e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 			AllowOrigins: []string{fmt.Sprintf("http://localhost:%d", config.VitePort)},
 		}))
@@ -125,7 +112,7 @@ func Run(config *Config) error {
 		return fmt.Errorf("admin token: %w", err)
 	}
 
-	log.Info().Int("port", config.Port).Msg("Setup completed, starting the application")
+	log.Info().Int("port", config.Port).Msg("setup completed, starting the application")
 	err = e.Start(fmt.Sprintf(":%d", config.Port))
 	if err != nil {
 		return fmt.Errorf("serve: %w", err)

@@ -1,0 +1,7 @@
+keys:
+  - &billy age15uzjpcp7d8gvect6qnlh3g5hfxu6c0feu7rdu9n6d3dwpp4fgftq0qjxa4
+creation_rules:
+  - path_regex: ^\.env\.sops\.yaml$
+    key_groups:
+      - age:
+          - *billy
