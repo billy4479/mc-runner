@@ -31,3 +31,11 @@ export async function login(token: string) {
 export async function getMe() {
   return fetch("/api/auth/me").then((res) => res.json());
 }
+
+export async function logout() {
+  await fetch("/api/auth/logout", {
+    method: "DELETE",
+  })
+    .then((res) => res.json())
+    .then(console.log);
+}

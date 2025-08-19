@@ -229,4 +229,44 @@ func addAuthRoutes(g *echo.Group) {
 		user := c.Get("user").(*repository.User)
 		return c.JSON(http.StatusOK, user)
 	}, authMiddleware)
+
+	g.DELETE("/logout", func(c echo.Context) error {
+		repo := c.Get("repo").(*repository.Queries)
+		ctx := c.Get("db_ctx").(context.Context)
+		user := c.Get("user").(*repository.User)
+
+		cookie, err := c.Cookie("auth")
+		if err != nil {
+			return echo.NewHTTPError(
+				http.StatusInternalServerError,
+				fmt.Errorf("at this point the cookie must exist: %w", err),
+			)
+		}
+
+		token, err := base64.RawURLEncoding.DecodeString(cookie.Value)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, err)
+		}
+
+		hash := sha3.Sum256(token)
+
+		err = repo.RemoveTokenExact(ctx, repository.RemoveTokenExactParams{
+			Token:  hash[:],
+			UserID: user.ID,
+		})
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, err)
+		}
+
+		c.SetCookie(&http.Cookie{
+			Name:     "auth",
+			Secure:   true,
+			HttpOnly: true,
+			Value:    "",
+			Path:     "/api",
+			Expires:  time.Now(),
+		})
+
+		return c.JSON(http.StatusOK, echo.Map{})
+	}, authMiddleware)
 }
