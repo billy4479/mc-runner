@@ -1,11 +1,11 @@
-import { defineConfig, UserConfig } from "vite";
+import { defineConfig, UserConfig, loadEnv } from "vite";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import tailwindcss from "@tailwindcss/vite";
 
 import path from "path";
 
 // https://vite.dev/config/
-export default defineConfig(({ command }) => {
+export default defineConfig(({ command, mode }) => {
   const configBase = {
     plugins: [svelte(), tailwindcss()],
     resolve: {
@@ -18,10 +18,12 @@ export default defineConfig(({ command }) => {
 
   if (command === "serve") {
     const devConfig: UserConfig = configBase;
+    const env = loadEnv(mode, path.join(process.cwd(), ".."), "");
+
     devConfig.server = {
       proxy: {
         "/api": {
-          target: "http://localhost:4479",
+          target: `http://localhost:${env.PORT}`,
           changeOrigin: true,
         },
       },
