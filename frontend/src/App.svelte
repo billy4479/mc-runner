@@ -1,8 +1,7 @@
 <script lang="ts">
-  import { logout } from "$lib/api";
   import { setMeOrError, getMeOrError } from "$lib/state.svelte";
-  import { Button } from "flowbite-svelte";
   import LoginScreen from "./LoginScreen.svelte";
+  import MainPage from "./MainPage.svelte";
 
   setMeOrError();
 </script>
@@ -20,15 +19,6 @@
       </div>
     {/if}
   {:else}
-    Welcome {getMeOrError().Name.String}
-
-    <Button
-      onclick={async () => {
-        await logout();
-        await setMeOrError();
-      }}
-    >
-      logout
-    </Button>
+    <MainPage />
   {/if}
 </main>
