@@ -21,6 +21,8 @@
           frontend = callPackage (import ./nix/frontend.nix) { };
           mc-runner = callPackage (import ./nix/mc-runner.nix) { inherit frontend; };
           docker-image = callPackage (import ./nix/docker.nix) { inherit mc-runner; };
+
+          default = mc-runner;
         };
 
         devShells.default = (import ./nix/shell.nix pkgs);

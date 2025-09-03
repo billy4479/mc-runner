@@ -7,7 +7,7 @@
 stdenv.mkDerivation (finalAttrs: {
   pname = "frontend";
   version = "1.0.0";
-  src = ../.;
+  src = ../frontend;
   nativeBuildInputs = [
     nodejs
     pnpm.configHook
@@ -15,18 +15,16 @@ stdenv.mkDerivation (finalAttrs: {
 
   pnpmDeps = pnpm.fetchDeps {
     inherit (finalAttrs) pname version src;
-    hash = "sha256-GMbYQa3AsLsCzeQOfyuAQOcW0o9GgEArfCvvowId+Wo=";
-    sourceRoot = "${finalAttrs.src}/frontend";
+    hash = "sha256-8BU0Xqoz+7o+iKf7+vbRPjVnRdk5HUk1TnHbyDs1iDs=";
+    fetcherVersion = 2;
   };
-
-  pnpmRoot = "frontend";
 
   buildPhase = # sh
     ''
-      pnpm -C frontend build
+      pnpm build
     '';
   installPhase = # sh
     ''
-      mv frontend/dist $out
+      mv dist $out
     '';
 })
