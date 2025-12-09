@@ -1,17 +1,27 @@
 <script lang="ts">
   import { getMeOrError, setMeOrError } from "$lib/state.svelte";
   import { logout } from "$lib/api";
+  import { ServerSocket } from "$lib/ws.svelte";
 
   import { Button } from "flowbite-svelte";
-  import { onMount } from "svelte";
 
   let serverRunning = $state(true);
   let serverStarting = $state(true);
 
   let consoleOutput: HTMLDivElement;
 
-  onMount(() => {
+  let serverSocket = new ServerSocket();
+
+  $effect(() => {
     consoleOutput.scrollTo(0, consoleOutput.scrollHeight);
+  });
+
+  $effect(() => {
+    serverSocket.connect();
+
+    return () => {
+      serverSocket.close();
+    };
   });
 
   const dummyConsoleOutput = `[20:38:18] [main/INFO]: Loading Minecraft 1.21.1 with Fabric Loader 0.16.2
@@ -186,11 +196,22 @@ java.lang.ArrayIndexOutOfBoundsException: arraycopy: length -1 is negative
 `;
 </script>
 
-<div class="w-3/5 rounded border border-gray-300">
+<div class="w-4/5 rounded border border-gray-300">
   <div
     class="flex flex-row items-center justify-between border-b border-gray-300 px-5 py-3"
   >
-    Welcome {getMeOrError().Name.String}
+    <div>
+      Welcome {getMeOrError().Name.String}
+
+      <span class="text-gray-600">
+        - {#if serverSocket.isConnected}
+          Connected to
+          <pre class="inline"> {serverSocket.serverVersionString} </pre>
+        {:else}
+          Disconnected
+        {/if}
+      </span>
+    </div>
 
     <div>
       {#if getMeOrError().ID == 0}
@@ -227,7 +248,7 @@ java.lang.ArrayIndexOutOfBoundsException: arraycopy: length -1 is negative
             <br />
             join the club!
             <br />
-            since you're here though,
+            Since you're here though,
             <br />
             tell me something about you're life
             <br />
@@ -244,7 +265,7 @@ java.lang.ArrayIndexOutOfBoundsException: arraycopy: length -1 is negative
       {/if}
     </div>
     <div class="border-l border-gray-300"></div>
-    <div class="flex w-1/4 flex-col items-center py-3 whitespace-nowrap">
+    <div class="flex w-fit flex-col items-center py-3 whitespace-nowrap">
       <Button
         color="green"
         class="mx-5 mb-3"
@@ -261,6 +282,13 @@ java.lang.ArrayIndexOutOfBoundsException: arraycopy: length -1 is negative
           <li>Giacostino</li>
           <li>alberello [BOT]</li>
         </ul>
+      </div>
+      <div>
+        <Button
+          onclick={() => {
+            serverSocket.connect();
+          }}>WS Connect</Button
+        >
       </div>
     </div>
   </div>

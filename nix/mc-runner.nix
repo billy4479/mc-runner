@@ -1,9 +1,14 @@
-{ buildGoModule, frontend, ... }:
-buildGoModule {
+{
+  buildGoModule,
+  frontend,
+  rev,
+  ...
+}:
+buildGoModule (finalAttrs: {
   src = ./..;
   pname = "mc-runner";
-  version = "1.0.0";
-  vendorHash = "sha256-SUkOb2OGh5xEsUUv5w0YQM7Ctx5DW9R2tBkkz06P2ds=";
+  version = "1.0.0-${rev}";
+  vendorHash = "sha256-4uAAmzKVbVbe3Ft1QLy87SPUgAgsgevqMj8g4HEPZbs=";
 
   buildInputs = [ frontend ];
 
@@ -11,6 +16,6 @@ buildGoModule {
     "-w"
     "-s"
     "-X github.com/billy4479/mc-runner/internal.FrontendPath=${frontend}"
-    "-X github.com/billy4479/mc-runner/internal.BuildMode=release"
+    "-X github.com/billy4479/mc-runner/internal.Version=${finalAttrs.version}"
   ];
-}
+})

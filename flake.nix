@@ -19,7 +19,10 @@
       {
         packages = rec {
           frontend = callPackage (import ./nix/frontend.nix) { };
-          mc-runner = callPackage (import ./nix/mc-runner.nix) { inherit frontend; };
+          mc-runner = callPackage (import ./nix/mc-runner.nix) {
+            inherit frontend;
+            rev = self.shortRev or self.dirtyShortRev or "dirty";
+          };
           docker-image = callPackage (import ./nix/docker.nix) { inherit mc-runner; };
 
           default = mc-runner;

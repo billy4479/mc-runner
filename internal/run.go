@@ -15,6 +15,7 @@ import (
 )
 
 var FrontendPath string = "frontend/dist"
+var Version string = "dev"
 
 func Run(config *Config) error {
 	debug := config.Environment == "debug"

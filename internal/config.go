@@ -1,7 +1,6 @@
 package internal
 
 type Config struct {
-	GhHookSecret string `required:"true" split_words:"true"`
 	TgToken      string `required:"true" split_words:"true"`
 	TgHookSecret string `required:"true" split_words:"true"`
 	McSecret     string `required:"true" split_words:"true"`

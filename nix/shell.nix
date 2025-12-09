@@ -19,16 +19,7 @@ pkgs.mkShell {
 
     nixd
 
-    (sops.overrideAttrs (
-      finalAttrs: previousAttrs: {
-        patches = [
-          (fetchpatch {
-            url = "https://github.com/getsops/sops/pull/1914.diff";
-            hash = "sha256-80L8JbzrZHhH8608B1YO+rlpYIYWD6gIvfqjkNATmoA=";
-          })
-        ];
-      }
-    ))
+    sops
   ];
 
   nativeBuildInputs = with pkgs; [
