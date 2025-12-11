@@ -1,4 +1,4 @@
-package internal
+package web
 
 import (
 	"context"
@@ -7,20 +7,18 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/billy4479/mc-runner/repository"
+	"github.com/billy4479/mc-runner/internal/config"
+	"github.com/billy4479/mc-runner/internal/driver"
+	"github.com/billy4479/mc-runner/internal/repository"
+
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/rs/zerolog/log"
 )
 
-var FrontendPath string = "frontend/dist"
-var Version string = "dev"
-
-func Run(config *Config) error {
-	debug := config.Environment == "debug"
-
-	db, err := sql.Open("sqlite3", config.DbPath)
+func RunWebServer(conf *config.Config, driver *driver.Driver) error {
+	db, err := sql.Open("sqlite3", conf.DbPath)
 	if err != nil {
 		return fmt.Errorf("open db: %w", err)
 	}
@@ -29,9 +27,11 @@ func Run(config *Config) error {
 
 	e.HideBanner = true
 	e.HidePort = true
-	e.Debug = debug
+	e.Debug = conf.Debug
 
-	// e.Use(middleware.Recover())
+	if !conf.Debug {
+		e.Use(middleware.Recover())
+	}
 	e.Use(middleware.Secure())
 	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
@@ -75,7 +75,7 @@ func Run(config *Config) error {
 		}
 
 		msg := echo.Map{"status": code}
-		if debug {
+		if conf.Debug {
 			msg["error"] = err.Error()
 		}
 		err = c.JSON(code, msg)
@@ -84,14 +84,14 @@ func Run(config *Config) error {
 		}
 	}
 
-	if debug {
+	if conf.Debug {
 		e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-			AllowOrigins: []string{fmt.Sprintf("http://localhost:%d", config.VitePort)},
+			AllowOrigins: []string{fmt.Sprintf("http://localhost:%d", conf.EnvConfig.VitePort)},
 		}))
 	}
 
-	log.Info().Str("frontend_path", FrontendPath)
-	e.Static("/", FrontendPath)
+	log.Info().Str("frontend_path", config.FrontendPath)
+	e.Static("/", config.FrontendPath)
 
 	repo := repository.New(db)
 	ctx := context.TODO()
@@ -106,15 +106,15 @@ func Run(config *Config) error {
 		}
 	})
 
-	addAPIRoutes(config, api)
+	addAPIRoutes(conf, api, driver)
 
 	err = ensureAdminToken(repo, ctx)
 	if err != nil {
 		return fmt.Errorf("admin token: %w", err)
 	}
 
-	log.Info().Int("port", config.Port).Msg("setup completed, starting the application")
-	err = e.Start(fmt.Sprintf(":%d", config.Port))
+	log.Info().Int("port", conf.EnvConfig.Port).Msg("setup completed, starting the application")
+	err = e.Start(fmt.Sprintf(":%d", conf.EnvConfig.Port))
 	if err != nil {
 		return fmt.Errorf("serve: %w", err)
 	}

@@ -1,16 +1,20 @@
-package internal
+package web
 
 import (
 	"fmt"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog/log"
+
+	"github.com/billy4479/mc-runner/internal/config"
+	"github.com/billy4479/mc-runner/internal/driver"
 )
 
-type State struct {
+type WsState struct {
 	ws      map[uint64]*websocket.Conn
 	wsMutex sync.Mutex
 
@@ -19,8 +23,8 @@ type State struct {
 	runningMutex    sync.Mutex
 }
 
-func NewState() *State {
-	return &State{
+func NewState() *WsState {
+	return &WsState{
 		ws:              make(map[uint64]*websocket.Conn),
 		wsMutex:         sync.Mutex{},
 		serverLog:       "",
@@ -28,21 +32,21 @@ func NewState() *State {
 		runningMutex:    sync.Mutex{}}
 }
 
-func (wss *State) AddConnection(ws *websocket.Conn, id uint64) {
+func (wss *WsState) AddConnection(ws *websocket.Conn, id uint64) {
 	wss.wsMutex.Lock()
 	defer wss.wsMutex.Unlock()
 
 	wss.ws[id] = ws
 }
 
-func (wss *State) GetConnection(id uint64) *websocket.Conn {
+func (wss *WsState) GetConnection(id uint64) *websocket.Conn {
 	wss.wsMutex.Lock()
 	defer wss.wsMutex.Unlock()
 
 	return wss.ws[id]
 }
 
-func (wss *State) CloseAndRemoveConnection(id uint64) error {
+func (wss *WsState) CloseAndRemoveConnection(id uint64) error {
 	wss.wsMutex.Lock()
 	defer wss.wsMutex.Unlock()
 
@@ -54,7 +58,41 @@ func (wss *State) CloseAndRemoveConnection(id uint64) error {
 	return err
 }
 
-func addWebsocket(g *echo.Group, config *Config) {
+type WsPayload interface {
+	Type() string
+}
+
+type WsServerState struct {
+	Version       string   `json:"version"`
+	ConnectUrl    string   `json:"connect_url"`
+	ServerName    string   `json:"server_name"`
+	IsRunning     bool     `json:"is_running"`
+	OnlinePlayers []string `json:"online_players"` // TODO
+	AutoStopTime  int64    `json:"auto_stop_time"` // TODO
+	BotTag        string   `json:"bot_tag"`        // TODO
+}
+
+func (p *WsServerState) Type() string {
+	return "state"
+}
+
+func NewWsPayloadVersion(conf *config.Config, d *driver.Driver) *WsServerState {
+	return &WsServerState{
+		Version:       config.Version,
+		ConnectUrl:    conf.ConnectUrl,
+		ServerName:    d.ServerName(),
+		IsRunning:     d.IsRunning(),
+		OnlinePlayers: d.OnlinePlayers(),
+		AutoStopTime:  time.Now().Add(d.TimeBeforeStop()).Unix(),
+		BotTag:        "@my_todo_bot",
+	}
+}
+
+func serializePayload(payload WsPayload) echo.Map {
+	return echo.Map{"type": payload.Type(), "data": payload}
+}
+
+func addWebsocket(g *echo.Group, conf *config.Config, driver *driver.Driver) {
 	wss := NewState()
 
 	idMutex := sync.Mutex{}
@@ -86,6 +124,11 @@ func addWebsocket(g *echo.Group, config *Config) {
 
 		log.Info().Uint64("request_id", connId).Msg("connection upgraded")
 
+		err = ws.WriteJSON(serializePayload(NewWsPayloadVersion(conf, driver)))
+		if logIfErr(err) {
+			return err
+		}
+
 		for {
 			msgType, msg, err := ws.ReadMessage()
 			if logIfErr(err) {
@@ -98,12 +141,11 @@ func addWebsocket(g *echo.Group, config *Config) {
 			}
 
 			switch string(msg) {
-			case "ping":
-				err := ws.WriteJSON(echo.Map{"type": "version", "data": "mc-runner@" + Version})
-				logIfErr(err)
-
 			case "start":
-				log.Info().Msg("TODO: starting server")
+				err := driver.Start()
+				if logIfErr(err) {
+					return err
+				}
 			}
 		}
 		return nil

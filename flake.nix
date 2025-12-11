@@ -16,7 +16,7 @@
         pkgs = nixpkgs.legacyPackages.${system};
         inherit (pkgs) callPackage;
       in
-      {
+      rec {
         packages = rec {
           frontend = callPackage (import ./nix/frontend.nix) { };
           mc-runner = callPackage (import ./nix/mc-runner.nix) {
@@ -24,11 +24,12 @@
             rev = self.shortRev or self.dirtyShortRev or "dirty";
           };
           docker-image = callPackage (import ./nix/docker.nix) { inherit mc-runner; };
+          mc-java = callPackage (import ./nix/java.nix) { };
 
           default = mc-runner;
         };
 
-        devShells.default = (import ./nix/shell.nix pkgs);
+        devShells.default = (import ./nix/shell.nix (pkgs // packages));
       }
     );
 }

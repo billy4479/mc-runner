@@ -5,9 +5,6 @@
 
   import { Button } from "flowbite-svelte";
 
-  let serverRunning = $state(true);
-  let serverStarting = $state(true);
-
   let consoleOutput: HTMLDivElement;
 
   let serverSocket = new ServerSocket();
@@ -201,14 +198,20 @@ java.lang.ArrayIndexOutOfBoundsException: arraycopy: length -1 is negative
     class="flex flex-row items-center justify-between border-b border-gray-300 px-5 py-3"
   >
     <div>
-      Welcome {getMeOrError().Name.String}
+      Welcome <b> {getMeOrError().Name.String} </b>
 
       <span class="text-gray-600">
         - {#if serverSocket.isConnected}
-          Connected to
-          <pre class="inline"> {serverSocket.serverVersionString} </pre>
+          <b>Connected </b>
+          to
+          <span class="inline font-mono">
+            mc-runner@{serverSocket.serverState?.version}
+          </span>
+          for server "<b> {serverSocket.serverState?.server_name} </b>"
+        {:else if serverSocket.isConnecting}
+          <b> Connecting... </b>
         {:else}
-          Disconnected
+          <b> Disconnected </b>
         {/if}
       </span>
     </div>
@@ -235,7 +238,7 @@ java.lang.ArrayIndexOutOfBoundsException: arraycopy: length -1 is negative
       bind:this={consoleOutput}
       class="mx-5 my-3 h-64 w-full overflow-scroll rounded border-gray-300 bg-gray-100 px-3 py-2 font-mono text-sm whitespace-pre"
     >
-      {#if !serverRunning}
+      {#if !serverSocket.serverState?.is_running}
         <div class="relative h-full">
           <div class="blur-sm select-none">
             This is dummy text
@@ -265,30 +268,29 @@ java.lang.ArrayIndexOutOfBoundsException: arraycopy: length -1 is negative
       {/if}
     </div>
     <div class="border-l border-gray-300"></div>
-    <div class="flex w-fit flex-col items-center py-3 whitespace-nowrap">
+    <div class="flex w-2/5 flex-col items-center py-3 whitespace-nowrap">
       <Button
         color="green"
+        disabled={!serverSocket.serverState ||
+          serverSocket.serverState.is_running}
         class="mx-5 mb-3"
         onclick={() => {
-          serverRunning = !serverRunning;
+          serverSocket.startServer();
         }}
       >
         Start server
       </Button>
       <div class="w-full border-t border-gray-300 px-5 py-3">
-        3 players online (1 bot):
-        <ul class="list-inside list-disc">
-          <li>Billy4479_</li>
-          <li>Giacostino</li>
-          <li>alberello [BOT]</li>
-        </ul>
-      </div>
-      <div>
-        <Button
-          onclick={() => {
-            serverSocket.connect();
-          }}>WS Connect</Button
-        >
+        {#if serverSocket.serverState?.is_running}
+          {serverSocket.serverState?.online_players.length} players online:
+          <ul class="list-inside list-disc break-words whitespace-break-spaces">
+            {#each serverSocket.serverState?.online_players as player}
+              <li>{player}</li>
+            {/each}
+          </ul>
+        {:else}
+          The server is not running.
+        {/if}
       </div>
     </div>
   </div>

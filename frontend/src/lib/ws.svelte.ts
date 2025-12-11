@@ -1,15 +1,29 @@
+export interface ServerState {
+  version: string;
+  connect_url: string;
+  server_name: string;
+  is_running: boolean;
+  online_players: string[];
+  auto_stop_time: number;
+  bot_tag: string;
+}
+
 export class ServerSocket {
   private _ws: WebSocket | null = null;
   #isConnected = $state(false);
-  #serverVersionString = $state("");
+  #serverState = $state<ServerState | null>(null);
+  #isConnecting = $state(false);
 
   private _reconnectTimeout: number | null = null;
 
   get isConnected() {
     return this.#isConnected;
   }
-  get serverVersionString() {
-    return this.#serverVersionString;
+  get serverState() {
+    return this.#serverState;
+  }
+  get isConnecting() {
+    return this.#isConnecting;
   }
 
   constructor() {}
@@ -17,6 +31,7 @@ export class ServerSocket {
   close() {
     if (this._ws) {
       this._ws.close(1000);
+      this.#isConnecting = false;
       if (this._reconnectTimeout) clearTimeout(this._reconnectTimeout);
 
       console.log("closing cleanely from client");
@@ -26,20 +41,21 @@ export class ServerSocket {
   connect() {
     if (this._ws !== null) return;
 
+    this.#isConnecting = true;
     this._ws = new WebSocket("/api/ws");
     const ws = this._ws;
-    console.log("connected ws");
 
     ws.addEventListener("close", (ev) => {
       this.#isConnected = false;
       this._ws = null;
 
-      if (ev.code != 1000) {
+      if (!ev.wasClean) {
         console.warn("WS closed", ev);
+        this.#isConnecting = true;
         this._reconnectTimeout = setTimeout(() => {
           console.log("attempting reconnection");
           this.connect();
-        }, 1000);
+        }, 5 * 1000);
       }
     });
 
@@ -49,8 +65,8 @@ export class ServerSocket {
       console.log(msg);
 
       switch (msg.type) {
-        case "version":
-          this.#serverVersionString = msg.data;
+        case "state":
+          this.#serverState = msg.data;
           break;
         default:
           console.warn("unknown message type");
@@ -58,8 +74,16 @@ export class ServerSocket {
       }
     });
     ws.addEventListener("open", () => {
-      ws.send("ping");
       this.#isConnected = true;
+      this.#isConnecting = false;
+      console.log("connected ws");
     });
+  }
+
+  startServer() {
+    if (this.#serverState?.is_running || !this.#isConnected || !this._ws)
+      return;
+
+    this._ws.send("start");
   }
 }

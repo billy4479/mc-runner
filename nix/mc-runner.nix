@@ -15,7 +15,7 @@ buildGoModule (finalAttrs: {
   ldflags = [
     "-w"
     "-s"
-    "-X github.com/billy4479/mc-runner/internal.FrontendPath=${frontend}"
-    "-X github.com/billy4479/mc-runner/internal.Version=${finalAttrs.version}"
+    "-X github.com/billy4479/mc-runner/internal/config.FrontendPath=${frontend}"
+    "-X github.com/billy4479/mc-runner/internal/config.Version=${finalAttrs.version}"
   ];
 })

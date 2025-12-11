@@ -1,9 +1,7 @@
 pkgs:
 pkgs.mkShell {
   packages = with pkgs; [
-    cloudflared
     podman
-    turso-cli
     air
 
     gopls
@@ -20,6 +18,10 @@ pkgs.mkShell {
     nixd
 
     sops
+  ];
+
+  buildInputs = with pkgs; [
+    mc-java
   ];
 
   nativeBuildInputs = with pkgs; [

@@ -3,12 +3,14 @@ module github.com/billy4479/mc-runner
 go 1.24.3
 
 require (
+	github.com/goccy/go-yaml v1.19.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/joho/godotenv v1.5.1
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/labstack/echo/v4 v4.13.4
 	github.com/mattn/go-sqlite3 v1.14.28
 	github.com/rs/zerolog v1.34.0
+	go.uber.org/multierr v1.11.0
 )
 
 require (

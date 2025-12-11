@@ -1,4 +1,4 @@
-package internal
+package web
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/billy4479/mc-runner/repository"
+	"github.com/billy4479/mc-runner/internal/repository"
 	"github.com/labstack/echo/v4"
 )
 
