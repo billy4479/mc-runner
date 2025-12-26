@@ -7,6 +7,9 @@ world_dir: <path to server>
 db_path: ./mc-runner.db
 connect_url: localhost:25565    # Where players should connect
 
+# The number of minutes to wait when there are no players online before stopping the server
+minutes_before_stop: 5
+
 # Restic config for automatic backups
 restic_path: /some/backup/path  # Where the backups live
 

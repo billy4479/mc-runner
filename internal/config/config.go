@@ -28,9 +28,11 @@ type EnvConfig struct {
 }
 
 type Config struct {
-	WorldDir   string `json:"world_dir"`
-	DbPath     string `json:"db_path"`
-	ConnectUrl string `json:"connect_url"`
+	WorldDir          string `json:"world_dir"`
+	DbPath            string `json:"db_path"`
+	ConnectUrl        string `json:"connect_url"`
+	MinutesBeforeStop int    `json:"minutes_before_stop"`
+
 	ResticPath string `json:"restic_path"`
 
 	Java8  string `json:"java8"`

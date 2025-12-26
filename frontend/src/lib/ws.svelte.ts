@@ -67,7 +67,6 @@ export class ServerSocket {
     ws.addEventListener("error", console.error);
     ws.addEventListener("message", (message) => {
       const msg = JSON.parse(message.data);
-      console.log(msg);
 
       switch (msg.type) {
         case "state":

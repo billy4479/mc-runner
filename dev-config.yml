@@ -7,3 +7,4 @@ java17: java17
 java21: java21
 java25: java25
 log_level: debug
+minutes_before_stop: 1

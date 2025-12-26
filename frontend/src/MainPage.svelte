@@ -23,6 +23,25 @@
   });
 
   let addDeviceModal = $state(false);
+  let timeBeforeStop = $state(0);
+
+  function formatDuration(seconds: number) {
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    return [mins, secs].map((v) => (v < 10 ? "0" + v : v)).join(":");
+  }
+
+  $effect(() => {
+    if (serverSocket.isConnected && serverSocket.serverState?.is_running) {
+      const interval = setInterval(() => {
+        if (!serverSocket.serverState) return;
+
+        timeBeforeStop =
+          serverSocket.serverState?.auto_stop_time * 1000 - Date.now();
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  });
 </script>
 
 <Modal title="Add device" bind:open={addDeviceModal}>
@@ -148,15 +167,22 @@
         Start server
       </Button>
       <div class="w-full border-t border-gray-300 px-5 py-3">
-        {#if serverSocket.serverState?.is_running}
+        {#if !serverSocket.isConnected}
+          The server is not connected.
+        {:else if serverSocket.serverState?.is_running}
           {serverSocket.serverState?.online_players.length} players online:
           <ul class="list-inside list-disc break-words whitespace-break-spaces">
             {#each serverSocket.serverState?.online_players as player}
               <li>{player}</li>
             {/each}
           </ul>
-        {:else if !serverSocket.isConnected}
-          The server is not connected.
+          {#if serverSocket.serverState?.online_players.length === 0}
+            <b class="break-words whitespace-break-spaces">
+              The server will close in {formatDuration(
+                Math.floor(timeBeforeStop / 1000),
+              )} minutes.
+            </b>
+          {/if}
         {:else}
           The server is not running.
         {/if}

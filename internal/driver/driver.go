@@ -5,9 +5,11 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -39,6 +41,10 @@ type Driver struct {
 
 	stateBroadcaster *Broadcaster[*ServerState]
 	chatBroadcaster  *Broadcaster[string]
+
+	stopTime time.Time
+
+	onlinePlayers *OnlinePlayers
 
 	isRunning bool
 }
@@ -111,23 +117,26 @@ func NewDriver(config *config.Config) (*Driver, error) {
 		return nil, err
 	}
 
-	driver := &Driver{
+	drv := &Driver{
 		globalConfig: config,
 
 		stateBroadcaster: NewBroadcaster[*ServerState](),
 		chatBroadcaster:  NewBroadcaster[string](),
 
 		stdoutBufferMutex: sync.Mutex{},
+		stopTime:          time.Unix(math.MaxInt64, 0),
 	}
 
-	err = yaml.Unmarshal(b, &driver.config)
+	drv.onlinePlayers = NewOnlinePlayers(drv)
+
+	err = yaml.Unmarshal(b, &drv.config)
 	if err != nil {
 		return nil, err
 	}
 
-	err = driver.makeNewExec()
+	err = drv.makeNewExec()
 
-	return driver, err
+	return drv, err
 }
 
 func (drv *Driver) StateBroadcaster() *Broadcaster[*ServerState] {
@@ -140,23 +149,10 @@ func (drv *Driver) GetState() *ServerState {
 		ConnectUrl:    drv.globalConfig.ConnectUrl,
 		ServerName:    drv.config.ServerName,
 		IsRunning:     drv.isRunning,
-		OnlinePlayers: drv.OnlinePlayers(),                         // TODO
-		AutoStopTime:  time.Now().Add(drv.TimeBeforeStop()).Unix(), // TODO
-		BotTag:        "@my_todo_bot",                              // TODO
+		OnlinePlayers: drv.onlinePlayers.Get(),
+		AutoStopTime:  drv.stopTime.Unix(),
+		BotTag:        "@my_todo_bot", // TODO
 	}
-}
-
-func (drv *Driver) OnlinePlayers() []string {
-	return []string{
-		"these names",
-		"are",
-		"placeholder",
-		"some could be very long, like very looooooooooong",
-	}
-}
-
-func (drv *Driver) TimeBeforeStop() time.Duration {
-	return 5 * time.Minute
 }
 
 func (drv *Driver) Start() error {
@@ -180,6 +176,8 @@ func (drv *Driver) Start() error {
 	}
 	drv.isRunning = true
 
+	drv.ScheduleStop()
+
 	go func() {
 		drv.stateBroadcaster.sendUpdate(drv.GetState())
 
@@ -191,11 +189,14 @@ func (drv *Driver) Start() error {
 
 				for scanner.Scan() {
 					line := append(scanner.Bytes(), '\n')
+					lineStr := string(line)
 
 					go func() {
 						_, err = os.Stdout.Write(line)
 						logIfErr(err)
 					}()
+
+					go drv.onlinePlayers.parseLine(lineStr)
 
 					go func() {
 						drv.stdoutBufferMutex.Lock()
@@ -204,7 +205,7 @@ func (drv *Driver) Start() error {
 						logIfErr(err)
 					}()
 
-					go drv.chatBroadcaster.sendUpdate(string(line))
+					go drv.chatBroadcaster.sendUpdate(lineStr)
 				}
 			}
 
@@ -226,7 +227,9 @@ func (drv *Driver) Start() error {
 
 		err := drv.process.Wait()
 
-		if err != nil {
+		// If the error is waitid... it means that the server has stopped naturally, therefore there is
+		// no need to wait for it.
+		if err != nil && err.Error() != "waitid: no child processes" {
 			log.Error().Err(err).
 				Int("exit_code", drv.process.ProcessState.ExitCode()).
 				Msg("server terminated with an error")
@@ -258,19 +261,45 @@ func (drv *Driver) Stop() {
 		return
 	}
 
-	err := drv.process.Process.Signal(os.Interrupt)
-	if err != nil {
-		log.Error().Err(err).Msg("could not send SIGINT, killing")
-		err = drv.process.Process.Kill()
-		if err != nil {
-			log.Error().Err(err).Msg("could not kill process")
-		}
-	}
+	drv.isRunning = false
 
-	// Errors will already be handled somewhere else
+	_, _ = drv.stdin.Write([]byte("/stop\n"))
+
+	go func() {
+		time.Sleep(10 * time.Second)
+
+		if drv.process.ProcessState != nil && !drv.process.ProcessState.Exited() {
+			err := drv.process.Process.Signal(os.Interrupt)
+			if err != nil {
+				log.Error().Err(err).Msg("could not send SIGINT, killing")
+				err = drv.process.Process.Kill()
+				if err != nil {
+					log.Error().Err(err).Msg("could not kill process")
+				}
+			}
+		}
+	}()
+
+	// Errors are already handled somewhere else
 	_ = drv.process.Wait()
 }
 
 func (drv *Driver) ChatBroadcaster() *Broadcaster[string] {
 	return drv.chatBroadcaster
+}
+
+func (drv *Driver) ScheduleStop() {
+	go func() {
+		thisStopTime := time.Now().Add(time.Duration(drv.globalConfig.MinutesBeforeStop) * time.Minute)
+
+		log.Debug().Msg("schedule stop")
+		drv.stopTime = thisStopTime
+		drv.stateBroadcaster.sendUpdate(drv.GetState())
+
+		time.Sleep(time.Duration(drv.globalConfig.MinutesBeforeStop) * time.Minute)
+		if drv.onlinePlayers.Count() == 0 && thisStopTime.Equal(drv.stopTime) {
+			log.Info().Msgf("no player online for %d minutes, stopping", drv.globalConfig.MinutesBeforeStop)
+			drv.Stop()
+		}
+	}()
 }
