@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { getMeOrError, setMeOrError } from "$lib/state.svelte";
-  import { logout } from "$lib/api";
+  import { getLocalMe, updateMeFromAPI } from "$lib/state.svelte";
+  import { addDevice, invite, logout } from "$lib/api";
   import { ServerSocket } from "$lib/ws.svelte";
 
-  import { Button } from "flowbite-svelte";
+  import { Button, Modal } from "flowbite-svelte";
 
   let consoleOutput: HTMLDivElement;
 
@@ -21,14 +21,36 @@
       serverSocket.close();
     };
   });
+
+  let addDeviceModal = $state(false);
 </script>
+
+<Modal title="Add device" bind:open={addDeviceModal}>
+  By clicking the button below you will copy a token. Paste that token in the
+  login field of the new device. Each token is valid for only one device and
+  expires in 3 hours.
+
+  <span> </span>
+
+  <div class="mt-5 flex justify-center">
+    <Button
+      color="green"
+      onclick={() => {
+        addDeviceModal = false;
+        addDevice();
+      }}
+    >
+      Undestood, copy the token
+    </Button>
+  </div>
+</Modal>
 
 <div class="w-4/5 rounded border border-gray-300">
   <div
     class="flex flex-row items-center justify-between border-b border-gray-300 px-5 py-3"
   >
     <div>
-      Welcome <b> {getMeOrError().Name.String} </b>
+      Welcome <b> {getLocalMe()?.user?.name} </b>
 
       <span class="text-gray-600">
         - {#if serverSocket.isConnected}
@@ -47,16 +69,26 @@
     </div>
 
     <div>
-      {#if getMeOrError().ID == 0}
-        <Button size="xs" outline color="alternative">Invite</Button>
+      {#if getLocalMe()?.user?.id === 0}
+        <Button size="xs" outline color="light" onclick={invite}>Invite</Button>
       {/if}
       <Button
         size="xs"
         outline
-        color="alternative"
+        color="light"
+        onclick={() => {
+          addDeviceModal = true;
+        }}
+      >
+        Add device
+      </Button>
+      <Button
+        size="xs"
+        outline
+        color="light"
         onclick={async () => {
           await logout();
-          await setMeOrError();
+          await updateMeFromAPI();
         }}
       >
         Logout

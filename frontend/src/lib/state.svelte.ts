@@ -1,11 +1,12 @@
-import { getMe } from "./api";
+import { getMe, type GetMeResult } from "./api";
 
-let meOrError = $state(null);
+let me = $state<GetMeResult | null>(null);
 
-export async function setMeOrError() {
-  meOrError = await getMe();
+export async function updateMeFromAPI() {
+  me = await getMe();
+  return me;
 }
 
-export function getMeOrError() {
-  return meOrError;
+export function getLocalMe() {
+  return me;
 }

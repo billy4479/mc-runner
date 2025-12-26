@@ -9,18 +9,6 @@ import (
 	"time"
 )
 
-type Metadata struct {
-	Key   string
-	Value string
-}
-
-type Player struct {
-	ID         int64
-	InGameName sql.NullString
-	IsOnline   bool
-	IsBot      bool
-}
-
 type TokenStore struct {
 	Token   []byte
 	Expires time.Time
@@ -29,8 +17,6 @@ type TokenStore struct {
 }
 
 type User struct {
-	ID       int64
-	Name     sql.NullString
-	PlayerID sql.NullInt64
-	TgID     sql.NullInt64
+	ID   int64
+	Name sql.NullString
 }

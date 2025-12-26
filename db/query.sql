@@ -1,13 +1,3 @@
-
--- name: GetMetadata :one
-SELECT value FROM metadata
-WHERE key = ?
-LIMIT 1;
-
--- name: SetMetadata :exec
-INSERT OR REPLACE INTO metadata (key, value)
-VALUES( ?, ? );
-
 -- name: GetUserFromToken :one
 SELECT sqlc.embed(users), token_store.expires FROM users
 INNER JOIN token_store ON token_store.user_id = users.id

@@ -57,21 +57,8 @@ func (q *Queries) GetAllTokensForUser(ctx context.Context, userID int64) ([]Toke
 	return items, nil
 }
 
-const getMetadata = `-- name: GetMetadata :one
-SELECT value FROM metadata
-WHERE key = ?
-LIMIT 1
-`
-
-func (q *Queries) GetMetadata(ctx context.Context, key string) (string, error) {
-	row := q.db.QueryRowContext(ctx, getMetadata, key)
-	var value string
-	err := row.Scan(&value)
-	return value, err
-}
-
 const getUserFromToken = `-- name: GetUserFromToken :one
-SELECT users.id, users.name, users.player_id, users.tg_id, token_store.expires FROM users
+SELECT users.id, users.name, token_store.expires FROM users
 INNER JOIN token_store ON token_store.user_id = users.id
 WHERE token_store.token = ? AND token_store.type = ?
 `
@@ -89,13 +76,7 @@ type GetUserFromTokenRow struct {
 func (q *Queries) GetUserFromToken(ctx context.Context, arg GetUserFromTokenParams) (GetUserFromTokenRow, error) {
 	row := q.db.QueryRowContext(ctx, getUserFromToken, arg.Token, arg.Type)
 	var i GetUserFromTokenRow
-	err := row.Scan(
-		&i.User.ID,
-		&i.User.Name,
-		&i.User.PlayerID,
-		&i.User.TgID,
-		&i.Expires,
-	)
+	err := row.Scan(&i.User.ID, &i.User.Name, &i.Expires)
 	return i, err
 }
 
@@ -126,21 +107,6 @@ type RemoveTokenExactParams struct {
 
 func (q *Queries) RemoveTokenExact(ctx context.Context, arg RemoveTokenExactParams) error {
 	_, err := q.db.ExecContext(ctx, removeTokenExact, arg.Token, arg.UserID)
-	return err
-}
-
-const setMetadata = `-- name: SetMetadata :exec
-INSERT OR REPLACE INTO metadata (key, value)
-VALUES( ?, ? )
-`
-
-type SetMetadataParams struct {
-	Key   string
-	Value string
-}
-
-func (q *Queries) SetMetadata(ctx context.Context, arg SetMetadataParams) error {
-	_, err := q.db.ExecContext(ctx, setMetadata, arg.Key, arg.Value)
 	return err
 }
 

@@ -1,14 +1,14 @@
 <script lang="ts">
   import { Button, Card, Label, Helper, Input } from "flowbite-svelte";
   import { register, login } from "$lib/api";
-  import { setMeOrError } from "$lib/state.svelte";
+  import { updateMeFromAPI } from "$lib/state.svelte";
 
   async function submitRegistration(event: Event) {
     event.preventDefault();
 
     const data = new FormData(event.target as HTMLFormElement);
     await register(data.get("token"), data.get("name"));
-    await setMeOrError();
+    await updateMeFromAPI();
   }
 
   async function submitLogin(event: Event) {
@@ -16,7 +16,7 @@
 
     const data = new FormData(event.target as HTMLFormElement);
     await login(data.get("token"));
-    await setMeOrError();
+    await updateMeFromAPI();
   }
 </script>
 
