@@ -5,6 +5,7 @@
   jre8_headless,
   jdk17_headless,
   jdk21_headless,
+  jdk25_headless,
   ...
 }:
 let
@@ -14,6 +15,7 @@ let
         "8" = jre8_headless;
         "17" = jdk17_headless;
         "21" = jdk21_headless;
+        "25" = jdk25_headless;
       };
 in
 stdenvNoCC.mkDerivation {

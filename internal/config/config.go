@@ -32,10 +32,13 @@ type Config struct {
 	DbPath     string `json:"db_path"`
 	ConnectUrl string `json:"connect_url"`
 	ResticPath string `json:"restic_path"`
-	Java8      string `json:"java8"`
-	Java17     string `json:"java17"`
-	Java21     string `json:"java21"`
-	LogLevel   string `json:"log_level"`
+
+	Java8  string `json:"java8"`
+	Java17 string `json:"java17"`
+	Java21 string `json:"java21"`
+	Java25 string `json:"java25"`
+
+	LogLevel string `json:"log_level"`
 
 	EnvConfig EnvConfig `json:"-"`
 	Debug     bool      `json:"-"`

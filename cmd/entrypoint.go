@@ -3,6 +3,8 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/billy4479/mc-runner/internal/config"
 	"github.com/billy4479/mc-runner/internal/driver"
@@ -30,14 +32,24 @@ func Run() error {
 		log.Warn().Err(err).Msg("proceeding without .env")
 	}
 
-	driver, err := driver.NewDriver(conf)
+	d, err := driver.NewDriver(conf)
 	if err != nil {
 		err = fmt.Errorf("driver: %w", err)
 		log.Fatal().Err(err)
 		return err
 	}
 
-	err = web.RunWebServer(conf, driver)
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM)
+	go func(d *driver.Driver) {
+		// TODO: stop web server gracefully
+		<-sigs
+		log.Info().Msg("received signal, terminating gracefully")
+		d.Stop()
+		os.Exit(0)
+	}(d)
+
+	err = web.RunWebServer(conf, d)
 	if err != nil {
 		err = fmt.Errorf("web: %w", err)
 		log.Fatal().Err(err)

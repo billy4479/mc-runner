@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
-	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
@@ -58,41 +57,7 @@ func (wss *WsState) CloseAndRemoveConnection(id uint64) error {
 	return err
 }
 
-type WsPayload interface {
-	Type() string
-}
-
-type WsServerState struct {
-	Version       string   `json:"version"`
-	ConnectUrl    string   `json:"connect_url"`
-	ServerName    string   `json:"server_name"`
-	IsRunning     bool     `json:"is_running"`
-	OnlinePlayers []string `json:"online_players"` // TODO
-	AutoStopTime  int64    `json:"auto_stop_time"` // TODO
-	BotTag        string   `json:"bot_tag"`        // TODO
-}
-
-func (p *WsServerState) Type() string {
-	return "state"
-}
-
-func NewWsPayloadVersion(conf *config.Config, d *driver.Driver) *WsServerState {
-	return &WsServerState{
-		Version:       config.Version,
-		ConnectUrl:    conf.ConnectUrl,
-		ServerName:    d.ServerName(),
-		IsRunning:     d.IsRunning(),
-		OnlinePlayers: d.OnlinePlayers(),
-		AutoStopTime:  time.Now().Add(d.TimeBeforeStop()).Unix(),
-		BotTag:        "@my_todo_bot",
-	}
-}
-
-func serializePayload(payload WsPayload) echo.Map {
-	return echo.Map{"type": payload.Type(), "data": payload}
-}
-
-func addWebsocket(g *echo.Group, conf *config.Config, driver *driver.Driver) {
+func addWebsocket(g *echo.Group, conf *config.Config, drv *driver.Driver) {
 	wss := NewState()
 
 	idMutex := sync.Mutex{}
@@ -122,9 +87,15 @@ func addWebsocket(g *echo.Group, conf *config.Config, driver *driver.Driver) {
 		wss.AddConnection(ws, connId)
 		defer logIfErr(wss.CloseAndRemoveConnection(connId))
 
+		drv.StateBroadcaster().Subscribe(connId, func(ss *driver.ServerState) {
+			logIfErr(ws.WriteJSON(echo.Map{"type": "state", "data": ss}))
+		})
+
+		defer drv.StateBroadcaster().Unsubscribe(connId)
+
 		log.Info().Uint64("request_id", connId).Msg("connection upgraded")
 
-		err = ws.WriteJSON(serializePayload(NewWsPayloadVersion(conf, driver)))
+		err = ws.WriteJSON(echo.Map{"type": "state", "data": drv.GetState()})
 		if logIfErr(err) {
 			return err
 		}
@@ -142,7 +113,7 @@ func addWebsocket(g *echo.Group, conf *config.Config, driver *driver.Driver) {
 
 			switch string(msg) {
 			case "start":
-				err := driver.Start()
+				err := drv.Start()
 				if logIfErr(err) {
 					return err
 				}
