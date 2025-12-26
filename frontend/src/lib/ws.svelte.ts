@@ -13,6 +13,7 @@ export class ServerSocket {
   #isConnected = $state(false);
   #serverState = $state<ServerState | null>(null);
   #isConnecting = $state(false);
+  #chatHistory = $state("");
 
   private _reconnectTimeout: number | null = null;
 
@@ -24,6 +25,9 @@ export class ServerSocket {
   }
   get isConnecting() {
     return this.#isConnecting;
+  }
+  get chatHistory() {
+    return this.#chatHistory;
   }
 
   constructor() {}
@@ -47,6 +51,7 @@ export class ServerSocket {
 
     ws.addEventListener("close", (ev) => {
       this.#isConnected = false;
+      this.#chatHistory = "";
       this._ws = null;
 
       if (!ev.wasClean) {
@@ -66,7 +71,12 @@ export class ServerSocket {
 
       switch (msg.type) {
         case "state":
+          if (this.#serverState?.is_running && !msg.data.is_running)
+            this.#chatHistory = "";
           this.#serverState = msg.data;
+          break;
+        case "chat":
+          if (msg.data.length !== 0) this.#chatHistory += msg.data;
           break;
         default:
           console.warn("unknown message type");

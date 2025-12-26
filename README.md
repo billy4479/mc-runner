@@ -39,7 +39,7 @@ java_flags:
 
 # Flags to pass _after_ the jar file, see https://minecraft.wiki/w/Tutorial:Setting_up_a_Java_Edition_server#Server_options
 minecraft_flags:                        
- - --no-gui
+ - nogui
 
 # The name of this server, will be diplasplayed in the web UI
 server_name: My amazing new server!     

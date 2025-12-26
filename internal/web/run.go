@@ -106,7 +106,7 @@ func RunWebServer(conf *config.Config, driver *driver.Driver) error {
 		}
 	})
 
-	addAPIRoutes(conf, api, driver)
+	addAPIRoutes(api, driver)
 
 	err = ensureAdminToken(repo, ctx)
 	if err != nil {

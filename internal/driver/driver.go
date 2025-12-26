@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -31,32 +30,42 @@ type Driver struct {
 	globalConfig *config.Config
 	process      *exec.Cmd
 
-	stdioMutex        sync.Mutex
-	stdin             *bufio.Writer
-	stdoutMultiplexer *SubscribeWriter
+	stdoutBufferMutex sync.Mutex
 	stdoutBuffer      *bytes.Buffer
 
+	stdin      io.Writer
 	stdoutPipe io.Reader
 	stderrPipe io.Reader
 
-	stateBroadcaster *StateBroadcaster
+	stateBroadcaster *Broadcaster[*ServerState]
+	chatBroadcaster  *Broadcaster[string]
 
 	isRunning bool
 }
 
-func (driver *Driver) getJavaExe() string {
-	switch driver.config.JavaVersion {
+type ServerState struct {
+	Version       string   `json:"version"`
+	ConnectUrl    string   `json:"connect_url"`
+	ServerName    string   `json:"server_name"`
+	IsRunning     bool     `json:"is_running"`
+	OnlinePlayers []string `json:"online_players"` // TODO
+	AutoStopTime  int64    `json:"auto_stop_time"` // TODO
+	BotTag        string   `json:"bot_tag"`        // TODO
+}
+
+func (drv *Driver) getJavaExe() string {
+	switch drv.config.JavaVersion {
 	case 8:
-		return driver.globalConfig.Java8
+		return drv.globalConfig.Java8
 	case 17:
-		return driver.globalConfig.Java17
+		return drv.globalConfig.Java17
 	case 21:
-		return driver.globalConfig.Java21
+		return drv.globalConfig.Java21
 	case 25:
-		return driver.globalConfig.Java25
+		return drv.globalConfig.Java25
 	default:
-		log.Warn().Int("specified_java_version", driver.config.JavaVersion).Msg("unsupported java version, falling back to java 21")
-		return driver.globalConfig.Java21
+		log.Warn().Int("specified_java_version", drv.config.JavaVersion).Msg("unsupported java version, falling back to java 21")
+		return drv.globalConfig.Java21
 	}
 }
 
@@ -87,7 +96,11 @@ func (drv *Driver) makeNewExec() error {
 	if err != nil {
 		return err
 	}
-	drv.stdin = bufio.NewWriter(stdin)
+	drv.stdin = stdin
+
+	drv.stdoutBufferMutex.Lock()
+	drv.stdoutBuffer = new(bytes.Buffer)
+	drv.stdoutBufferMutex.Unlock()
 
 	return nil
 }
@@ -99,11 +112,13 @@ func NewDriver(config *config.Config) (*Driver, error) {
 	}
 
 	driver := &Driver{
-		stdioMutex:   sync.Mutex{},
-		stdoutBuffer: bytes.NewBuffer([]byte{}),
 		globalConfig: config,
+
+		stateBroadcaster: NewBroadcaster[*ServerState](),
+		chatBroadcaster:  NewBroadcaster[string](),
+
+		stdoutBufferMutex: sync.Mutex{},
 	}
-	driver.stateBroadcaster = NewStateBroadcaster(driver)
 
 	err = yaml.Unmarshal(b, &driver.config)
 	if err != nil {
@@ -111,34 +126,27 @@ func NewDriver(config *config.Config) (*Driver, error) {
 	}
 
 	err = driver.makeNewExec()
-	driver.stdoutMultiplexer = NewSubscribeWriter()
-	driver.stdoutMultiplexer.Subscribe(driver.stdoutBuffer, math.MaxUint64)
-	driver.stdoutMultiplexer.Subscribe(os.Stdout, math.MaxUint64-1)
 
 	return driver, err
 }
 
-func (d *Driver) StateBroadcaster() *StateBroadcaster {
-	return d.stateBroadcaster
+func (drv *Driver) StateBroadcaster() *Broadcaster[*ServerState] {
+	return drv.stateBroadcaster
 }
 
-func (d *Driver) Stdout() *SubscribeWriter {
-	return d.stdoutMultiplexer
-}
-
-func (driver *Driver) GetState() *ServerState {
+func (drv *Driver) GetState() *ServerState {
 	return &ServerState{
 		Version:       config.Version,
-		ConnectUrl:    driver.globalConfig.ConnectUrl,
-		ServerName:    driver.config.ServerName,
-		IsRunning:     driver.isRunning,
-		OnlinePlayers: driver.OnlinePlayers(),                         // TODO
-		AutoStopTime:  time.Now().Add(driver.TimeBeforeStop()).Unix(), // TODO
-		BotTag:        "@my_todo_bot",                                 // TODO
+		ConnectUrl:    drv.globalConfig.ConnectUrl,
+		ServerName:    drv.config.ServerName,
+		IsRunning:     drv.isRunning,
+		OnlinePlayers: drv.OnlinePlayers(),                         // TODO
+		AutoStopTime:  time.Now().Add(drv.TimeBeforeStop()).Unix(), // TODO
+		BotTag:        "@my_todo_bot",                              // TODO
 	}
 }
 
-func (d *Driver) OnlinePlayers() []string {
+func (drv *Driver) OnlinePlayers() []string {
 	return []string{
 		"these names",
 		"are",
@@ -147,13 +155,21 @@ func (d *Driver) OnlinePlayers() []string {
 	}
 }
 
-func (d *Driver) TimeBeforeStop() time.Duration {
+func (drv *Driver) TimeBeforeStop() time.Duration {
 	return 5 * time.Minute
 }
 
 func (drv *Driver) Start() error {
 	if drv.isRunning {
 		return nil
+	}
+
+	logIfErr := func(err error) bool {
+		if err == nil {
+			return false
+		}
+		log.Error().Err(fmt.Errorf("driver: %w", err))
+		return true
 	}
 
 	log.Debug().Str("server_name", drv.config.ServerName).Msg("starting server")
@@ -164,30 +180,56 @@ func (drv *Driver) Start() error {
 	}
 	drv.isRunning = true
 
-	{
-		// We do not check errors here as (I believe) they should get caught by cmd.Wait()
-		go func() {
-			_, _ = io.Copy(drv.stdoutMultiplexer, drv.stdoutPipe)
-		}()
-		go func() {
-			_, _ = io.Copy(drv.stdoutMultiplexer, drv.stderrPipe)
-		}()
-		go func() {
-			_, _ = io.Copy(drv.stdin, os.Stdin)
-		}()
-	}
-
 	go func() {
-		drv.stateBroadcaster.sendUpdate()
+		drv.stateBroadcaster.sendUpdate(drv.GetState())
+
+		{
+			// I believe errors should have been already caught by cmd.Wait()
+
+			readFrom := func(reader io.Reader) {
+				scanner := bufio.NewScanner(reader)
+
+				for scanner.Scan() {
+					line := append(scanner.Bytes(), '\n')
+
+					go func() {
+						_, err = os.Stdout.Write(line)
+						logIfErr(err)
+					}()
+
+					go func() {
+						drv.stdoutBufferMutex.Lock()
+						_, err = drv.stdoutBuffer.Write(line)
+						drv.stdoutBufferMutex.Unlock()
+						logIfErr(err)
+					}()
+
+					go drv.chatBroadcaster.sendUpdate(string(line))
+				}
+			}
+
+			go readFrom(drv.stdoutPipe)
+			go readFrom(drv.stderrPipe)
+
+			go func() {
+				scanner := bufio.NewScanner(os.Stdin)
+				for scanner.Scan() {
+					_, _ = drv.stdin.Write(append(scanner.Bytes(), '\n'))
+				}
+
+				// This should be unreachable, since os.Stdin will never EOF.
+				// Currently, typing commands in stdin while the server is closed, results in the command
+				// being sent to the server as soon as it opens, since Write waits until it is actually
+				// possible to write.
+			}()
+		}
+
 		err := drv.process.Wait()
 
 		if err != nil {
 			log.Error().Err(err).
 				Int("exit_code", drv.process.ProcessState.ExitCode()).
 				Msg("server terminated with an error")
-
-			// At this point we don't care if we fail
-			_, _ = drv.stdoutMultiplexer.Write(fmt.Appendf(nil, "\n\n[ERR]: Server terminated with an error: %v\n\n", err))
 		} else {
 			log.Info().Msg("server terminated with no errors")
 		}
@@ -198,26 +240,37 @@ func (drv *Driver) Start() error {
 			log.Fatal().Err(err).Msg("could not create a new process")
 		}
 
-		drv.stateBroadcaster.sendUpdate()
+		drv.stateBroadcaster.sendUpdate(drv.GetState())
 	}()
 
 	return nil
 }
 
-func (d *Driver) Stop() {
-	if !d.isRunning {
+func (drv *Driver) GetChatHistory() string {
+	drv.stdoutBufferMutex.Lock()
+	defer drv.stdoutBufferMutex.Unlock()
+
+	return drv.stdoutBuffer.String()
+}
+
+func (drv *Driver) Stop() {
+	if !drv.isRunning {
 		return
 	}
 
-	err := d.process.Process.Signal(os.Interrupt)
+	err := drv.process.Process.Signal(os.Interrupt)
 	if err != nil {
 		log.Error().Err(err).Msg("could not send SIGINT, killing")
-		err = d.process.Process.Kill()
+		err = drv.process.Process.Kill()
 		if err != nil {
 			log.Error().Err(err).Msg("could not kill process")
 		}
 	}
 
 	// Errors will already be handled somewhere else
-	_ = d.process.Wait()
+	_ = drv.process.Wait()
+}
+
+func (drv *Driver) ChatBroadcaster() *Broadcaster[string] {
+	return drv.chatBroadcaster
 }

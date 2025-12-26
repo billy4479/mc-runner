@@ -9,7 +9,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog/log"
 
-	"github.com/billy4479/mc-runner/internal/config"
 	"github.com/billy4479/mc-runner/internal/driver"
 )
 
@@ -57,7 +56,7 @@ func (wss *WsState) CloseAndRemoveConnection(id uint64) error {
 	return err
 }
 
-func addWebsocket(g *echo.Group, conf *config.Config, drv *driver.Driver) {
+func addWebsocket(g *echo.Group, drv *driver.Driver) {
 	wss := NewState()
 
 	idMutex := sync.Mutex{}
@@ -87,15 +86,32 @@ func addWebsocket(g *echo.Group, conf *config.Config, drv *driver.Driver) {
 		wss.AddConnection(ws, connId)
 		defer logIfErr(wss.CloseAndRemoveConnection(connId))
 
-		drv.StateBroadcaster().Subscribe(connId, func(ss *driver.ServerState) {
-			logIfErr(ws.WriteJSON(echo.Map{"type": "state", "data": ss}))
-		})
-
-		defer drv.StateBroadcaster().Unsubscribe(connId)
+		connectionLock := sync.Mutex{}
 
 		log.Info().Uint64("request_id", connId).Msg("connection upgraded")
 
+		{
+			drv.StateBroadcaster().Subscribe(connId, func(ss *driver.ServerState) {
+				connectionLock.Lock()
+				defer connectionLock.Unlock()
+				logIfErr(ws.WriteJSON(echo.Map{"type": "state", "data": ss}))
+			})
+			defer drv.StateBroadcaster().Unsubscribe(connId)
+
+			drv.ChatBroadcaster().Subscribe(connId, func(s string) {
+				connectionLock.Lock()
+				defer connectionLock.Unlock()
+				logIfErr(ws.WriteJSON(echo.Map{"type": "chat", "data": s}))
+			})
+			defer drv.ChatBroadcaster().Unsubscribe(connId)
+		}
+
 		err = ws.WriteJSON(echo.Map{"type": "state", "data": drv.GetState()})
+		if logIfErr(err) {
+			return err
+		}
+
+		err = ws.WriteJSON(echo.Map{"type": "chat", "data": drv.GetChatHistory()})
 		if logIfErr(err) {
 			return err
 		}
