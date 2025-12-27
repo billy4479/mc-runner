@@ -1,4 +1,9 @@
-{ dockerTools, mc-runner, ... }:
+{
+  dockerTools,
+  mc-runner,
+  frontend,
+  ...
+}:
 
 dockerTools.buildLayeredImage {
   name = "mc-runner";
@@ -7,6 +12,7 @@ dockerTools.buildLayeredImage {
   contents = [
     dockerTools.caCertificates
     mc-runner
+    frontend
   ];
 
   config = {
