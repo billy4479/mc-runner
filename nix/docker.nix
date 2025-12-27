@@ -1,6 +1,7 @@
 {
   dockerTools,
   mc-runner,
+  mc-java,
   ...
 }:
 
@@ -11,6 +12,7 @@ dockerTools.buildLayeredImage {
   contents = [
     dockerTools.caCertificates
     mc-runner
+    mc-java
   ];
 
   config = {

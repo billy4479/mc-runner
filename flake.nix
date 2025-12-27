@@ -23,7 +23,7 @@
             inherit frontend;
             rev = self.shortRev or self.dirtyShortRev or "dirty";
           };
-          docker-image = callPackage (import ./nix/docker.nix) { inherit mc-runner frontend; };
+          docker-image = callPackage (import ./nix/docker.nix) { inherit mc-runner mc-java; };
           mc-java = callPackage (import ./nix/java.nix) { };
 
           default = mc-runner;
