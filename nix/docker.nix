@@ -1,7 +1,6 @@
 {
   dockerTools,
   mc-runner,
-  frontend,
   ...
 }:
 
@@ -12,7 +11,6 @@ dockerTools.buildLayeredImage {
   contents = [
     dockerTools.caCertificates
     mc-runner
-    frontend
   ];
 
   config = {

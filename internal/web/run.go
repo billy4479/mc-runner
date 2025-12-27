@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"time"
 
@@ -17,7 +18,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func RunWebServer(conf *config.Config, driver *driver.Driver) error {
+func RunWebServer(conf *config.Config, driver *driver.Driver, frontend fs.FS) error {
 	db, err := sql.Open("sqlite3", conf.DbPath)
 	if err != nil {
 		return fmt.Errorf("open db: %w", err)
@@ -90,8 +91,7 @@ func RunWebServer(conf *config.Config, driver *driver.Driver) error {
 		}))
 	}
 
-	log.Info().Str("frontend_path", config.FrontendPath)
-	e.Static("/", config.FrontendPath)
+	e.StaticFS("/", echo.MustSubFS(frontend, "frontend/dist"))
 
 	repo := repository.New(db)
 	ctx := context.TODO()

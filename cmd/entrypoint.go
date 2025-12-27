@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"os/signal"
 	"syscall"
@@ -14,7 +15,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func Run() error {
+func Run(frontend fs.FS) error {
 	conf, dotenvErr, err := config.NewConfig()
 
 	if err != nil {
@@ -49,7 +50,7 @@ func Run() error {
 		os.Exit(0)
 	}(d)
 
-	err = web.RunWebServer(conf, d)
+	err = web.RunWebServer(conf, d, frontend)
 	if err != nil {
 		err = fmt.Errorf("web: %w", err)
 		log.Fatal().Err(err)

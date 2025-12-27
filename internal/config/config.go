@@ -11,8 +11,7 @@ import (
 )
 
 const (
-	FrontendPath string = "frontend/dist"
-	Version      string = "dev"
+	Version string = "dev"
 )
 
 type EnvConfig struct {
@@ -22,8 +21,8 @@ type EnvConfig struct {
 
 	// These you can commit publically if you want
 	Environment string `default:"release"`
-	VitePort    int    `required:"true" split_words:"true"`
-	Port        int    `required:"true" split_words:"true"`
+	VitePort    int    `default:"5173" split_words:"true"`
+	Port        int    `default:"4479" split_words:"true"`
 	ConfigPath  string `default:"config.yml" split_words:"true"`
 }
 
