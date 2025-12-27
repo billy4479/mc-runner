@@ -10,7 +10,6 @@ require (
 	github.com/labstack/echo/v4 v4.13.4
 	github.com/mattn/go-sqlite3 v1.14.28
 	github.com/rs/zerolog v1.34.0
-	go.uber.org/multierr v1.11.0
 )
 
 require (
