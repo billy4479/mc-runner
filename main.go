@@ -12,7 +12,6 @@ import (
 var frontend embed.FS
 
 func main() {
-	fmt.Println(frontend.ReadDir("frontend/dist"))
 	err := cmd.Run(frontend)
 	if err != nil {
 		fmt.Println(err)

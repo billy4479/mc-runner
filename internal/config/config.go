@@ -10,7 +10,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-const (
+var (
 	Version string = "dev"
 )
 

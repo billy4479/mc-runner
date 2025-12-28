@@ -33,6 +33,8 @@ func Run(frontend fs.FS) error {
 		log.Warn().Err(err).Msg("proceeding without .env")
 	}
 
+	log.Info().Str("version", config.Version).Msg("mc-runner")
+
 	d, err := driver.NewDriver(conf)
 	if err != nil {
 		err = fmt.Errorf("driver: %w", err)

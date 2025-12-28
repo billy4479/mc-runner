@@ -237,6 +237,7 @@ func (drv *Driver) Start() error {
 		}
 
 		drv.isRunning = false
+		drv.onlinePlayers.Clear()
 		err = drv.makeNewExec()
 		if err != nil {
 			log.Fatal().Err(err).Msg("could not create a new process")

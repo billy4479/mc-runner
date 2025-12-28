@@ -38,6 +38,12 @@ func (op *OnlinePlayers) Count() int {
 	return len(op.players)
 }
 
+func (op *OnlinePlayers) Clear() {
+	op.mutex.Lock()
+	op.players = make(map[string]struct{})
+	op.mutex.Unlock()
+}
+
 func (op *OnlinePlayers) parseLine(line string) {
 	words := strings.Split(line[:len(line)-1], " ")
 	if len(words) != 7 {
