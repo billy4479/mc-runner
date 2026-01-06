@@ -5,11 +5,11 @@
   ...
 }:
 
-dockerTools.buildLayeredImage {
+dockerTools.buildImage {
   name = "mc-runner";
   tag = "latest";
 
-  contents = [
+  copyToRoot = [
     dockerTools.caCertificates
     mc-runner
     mc-java
