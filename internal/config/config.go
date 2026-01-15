@@ -32,7 +32,9 @@ type Config struct {
 	ConnectUrl        string `json:"connect_url"`
 	MinutesBeforeStop int    `json:"minutes_before_stop"`
 
-	ResticPath string `json:"restic_path"`
+	ResticEnable bool   `json:"restic_enable"`
+	ResticPath   string `json:"restic_path"`
+	ResticRepo   string `json:"restic_repo"`
 
 	Java8  string `json:"java8"`
 	Java17 string `json:"java17"`

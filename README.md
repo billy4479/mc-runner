@@ -11,7 +11,9 @@ connect_url: localhost:25565    # Where players should connect
 minutes_before_stop: 5
 
 # Restic config for automatic backups
-restic_path: /some/backup/path  # Where the backups live
+restic_enable: false            # Enable the feature
+restic_path: restic             # Path to restic executable
+restic_repo: /some/backup/path  # Where the backups live
 
 # Use these defaults when using the container image
 java8: java8                    # Java 8 executable

@@ -1,7 +1,9 @@
 world_dir: ./test_world
 db_path: ./mc-runner.db
 connect_url: localhost:25565
-restic_path: /tmp/TODO
+restic_enable: false
+restic_path: restic
+restic_repo: /tmp/TODO
 java8: java8
 java17: java17
 java21: java21

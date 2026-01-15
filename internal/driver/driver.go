@@ -236,6 +236,8 @@ func (drv *Driver) Start() error {
 			log.Info().Msg("server terminated with no errors")
 		}
 
+		drv.backup()
+
 		drv.isRunning = false
 		drv.onlinePlayers.Clear()
 		err = drv.makeNewExec()
@@ -302,4 +304,22 @@ func (drv *Driver) ScheduleStop() {
 			drv.Stop()
 		}
 	}()
+}
+
+func (drv *Driver) backup() {
+	if !drv.globalConfig.ResticEnable {
+		return
+	}
+
+	log.Info().Msg("starting restic backup")
+
+	cmd := exec.Command(drv.globalConfig.ResticPath, "backup", drv.globalConfig.WorldDir, "--repo", drv.globalConfig.ResticRepo)
+	cmd.Env = os.Environ()
+
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Error().Err(err).Str("output", string(out)).Msg("restic backup failed")
+	} else {
+		log.Info().Msg("restic backup finished")
+	}
 }
