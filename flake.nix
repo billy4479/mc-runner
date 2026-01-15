@@ -21,10 +21,12 @@
           frontend = callPackage (import ./nix/frontend.nix) { };
           mc-runner = callPackage (import ./nix/mc-runner.nix) {
             inherit frontend;
+            cloudflaredFlags = "version";
             rev = self.shortRev or self.dirtyShortRev or "dirty";
           };
-          docker-image = callPackage (import ./nix/docker.nix) { inherit mc-runner mc-java; };
           mc-java = callPackage (import ./nix/java.nix) { };
+
+          cloudflared-wrapper = ((import ./nix/cloudflared-wrapper.nix) { inherit pkgs; }) "version";
 
           default = mc-runner;
         };

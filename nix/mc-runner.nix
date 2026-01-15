@@ -1,23 +1,36 @@
 {
+  pkgs,
   buildGoModule,
   frontend,
+  cloudflaredFlags,
   rev,
   ...
 }:
+let
+  cloudflared-wrapper = ((import ./cloudflared-wrapper.nix) { inherit pkgs; }) cloudflaredFlags;
+in
 buildGoModule (finalAttrs: {
   src = ./..;
   pname = "mc-runner";
   version = "1.0.0-${rev}";
   vendorHash = "sha256-y7Ou8MvRERtYLt5kqPXD+gbzMMvTF7RuHHKyp4a/hZ8=";
 
-  buildInputes = [ frontend ];
-  disallowedRequisites = [ frontend ];
+  subPackages = [ "." ];
+
+  disallowedRequisites = [
+    frontend
+    cloudflared-wrapper
+  ];
+
+  doCheck = false;
 
   preBuild = # sh
     ''
       rm -rf ./frontend
-      mkdir -p frontend
-      cp -rv ${frontend} ./frontend/dist
+      mkdir -p ./frontend/dist/cloudflared-wrapper
+
+      cp -rv ${frontend}/* ./frontend/dist
+      cp -rv ${cloudflared-wrapper}/bin/* ./frontend/dist/cloudflared-wrapper
     '';
 
   ldflags = [

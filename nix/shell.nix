@@ -15,6 +15,8 @@ pkgs.mkShell {
     svelte-language-server
     tailwindcss-language-server
 
+    prettier
+
     nixd
 
     sops

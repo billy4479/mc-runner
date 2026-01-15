@@ -27,6 +27,10 @@ export default defineConfig(({ command, mode }) => {
           changeOrigin: true,
           ws: true,
         },
+        "/cloudflared-wrapper": {
+          target: `http://localhost:${env.PORT}`,
+          changeOrigin: true,
+        },
       },
     };
     return devConfig;

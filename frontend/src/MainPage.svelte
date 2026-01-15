@@ -3,7 +3,7 @@
   import { addDevice, invite, logout } from "$lib/api";
   import { ServerSocket } from "$lib/ws.svelte";
 
-  import { Button, Modal } from "flowbite-svelte";
+  import { Button, Modal, Dropdown, DropdownItem } from "flowbite-svelte";
 
   let consoleOutput: HTMLDivElement;
 
@@ -88,6 +88,36 @@
     </div>
 
     <div>
+      <Button size="xs" outline color="light" onclick={async () => {}}>
+        Download Tunnel
+      </Button>
+      <Dropdown simple>
+        <DropdownItem
+          href="/cloudflared-wrapper/cloudflared-wrapper-windows-amd64.exe"
+        >
+          Windows (x86_64)
+        </DropdownItem>
+        <DropdownItem
+          href="/cloudflared-wrapper/cloudflared-wrapper-darwin-amd64"
+        >
+          macOS (x86_64)
+        </DropdownItem>
+        <DropdownItem
+          href="/cloudflared-wrapper/cloudflared-wrapper-darwin-arm64"
+        >
+          macOS (arm64)
+        </DropdownItem>
+        <DropdownItem
+          href="/cloudflared-wrapper/cloudflared-wrapper-linux-amd64"
+        >
+          Linux (x86_64)
+        </DropdownItem>
+        <DropdownItem
+          href="/cloudflared-wrapper/cloudflared-wrapper-linux-arm64"
+        >
+          Linux (arm64)
+        </DropdownItem>
+      </Dropdown>
       {#if getLocalMe()?.user?.id === 0}
         <Button size="xs" outline color="light" onclick={invite}>Invite</Button>
       {/if}
