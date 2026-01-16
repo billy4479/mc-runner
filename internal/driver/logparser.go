@@ -1,6 +1,7 @@
 package driver
 
 import (
+	"fmt"
 	"maps"
 	"slices"
 	"strings"
@@ -59,11 +60,13 @@ func (op *OnlinePlayers) parseLine(line string) {
 			op.players[playerName] = struct{}{}
 			didChange = true
 			op.mutex.Unlock()
+			sendTelegramMessage(op.drv.globalConfig, fmt.Sprintf("Player %s joined the game", playerName))
 		case "left":
 			op.mutex.Lock()
 			delete(op.players, playerName)
 			didChange = true
 			op.mutex.Unlock()
+			sendTelegramMessage(op.drv.globalConfig, fmt.Sprintf("Player %s left the game", playerName))
 		}
 	}
 

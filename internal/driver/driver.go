@@ -150,7 +150,6 @@ func (drv *Driver) GetState() *ServerState {
 		IsRunning:     drv.isRunning,
 		OnlinePlayers: drv.onlinePlayers.Get(),
 		AutoStopTime:  drv.stopTime.Unix(),
-		BotTag:        "@my_todo_bot", // TODO
 	}
 }
 
@@ -174,6 +173,8 @@ func (drv *Driver) Start() error {
 		return err
 	}
 	drv.isRunning = true
+
+	sendTelegramMessage(drv.globalConfig, fmt.Sprintf("Server %s starting...", drv.config.ServerName))
 
 	drv.ScheduleStop()
 
@@ -232,8 +233,10 @@ func (drv *Driver) Start() error {
 			log.Error().Err(err).
 				Int("exit_code", drv.process.ProcessState.ExitCode()).
 				Msg("server terminated with an error")
+			sendTelegramMessage(drv.globalConfig, fmt.Sprintf("Server %s terminated with error: %v", drv.config.ServerName, err))
 		} else {
 			log.Info().Msg("server terminated with no errors")
+			sendTelegramMessage(drv.globalConfig, fmt.Sprintf("Server %s stopped.", drv.config.ServerName))
 		}
 
 		drv.backup()
@@ -262,6 +265,8 @@ func (drv *Driver) Stop() {
 	if !drv.isRunning {
 		return
 	}
+
+	sendTelegramMessage(drv.globalConfig, fmt.Sprintf("Server %s stopping...", drv.config.ServerName))
 
 	drv.isRunning = false
 
@@ -295,6 +300,7 @@ func (drv *Driver) ScheduleStop() {
 		thisStopTime := time.Now().Add(time.Duration(drv.globalConfig.MinutesBeforeStop) * time.Minute)
 
 		log.Debug().Msg("schedule stop")
+		sendTelegramMessage(drv.globalConfig, fmt.Sprintf("Server %s scheduled to stop in %d minutes", drv.config.ServerName, drv.globalConfig.MinutesBeforeStop))
 		drv.stopTime = thisStopTime
 		drv.stateBroadcaster.sendUpdate(drv.GetState())
 

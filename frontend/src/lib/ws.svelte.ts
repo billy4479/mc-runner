@@ -5,7 +5,6 @@ export interface ServerState {
   is_running: boolean;
   online_players: string[];
   auto_stop_time: number;
-  bot_tag: string;
 }
 
 export class ServerSocket {
@@ -30,7 +29,7 @@ export class ServerSocket {
     return this.#chatHistory;
   }
 
-  constructor() {}
+  constructor() { }
 
   close() {
     if (this._ws) {
