@@ -10,22 +10,22 @@
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json"
   },
   "devDependencies": {
-    "@sveltejs/vite-plugin-svelte": "^5.0.3",
-    "@tsconfig/svelte": "^5.0.4",
-    "prettier": "^3.5.3",
-    "prettier-plugin-svelte": "^3.4.0",
-    "prettier-plugin-tailwindcss": "^0.6.12",
-    "svelte": "^5.28.1",
-    "svelte-check": "^4.1.6",
-    "typescript": "~5.8.3",
-    "vite": "^6.3.5"
+    "@sveltejs/vite-plugin-svelte": "^7.1.2",
+    "@tsconfig/svelte": "^5.0.8",
+    "prettier": "^3.8.3",
+    "prettier-plugin-svelte": "^4.0.1",
+    "prettier-plugin-tailwindcss": "^0.8.0",
+    "svelte": "^5.55.9",
+    "svelte-check": "^4.4.8",
+    "typescript": "~6.0.3",
+    "vite": "^8.0.14"
   },
   "dependencies": {
     "@popperjs/core": "^2.11.8",
-    "@tailwindcss/vite": "^4.1.8",
-    "flowbite": "^3.1.2",
-    "flowbite-svelte": "^1.5.3",
-    "tailwind-merge": "^3.3.0",
-    "tailwindcss": "^4.1.8"
+    "@tailwindcss/vite": "^4.3.0",
+    "flowbite": "^4.0.2",
+    "flowbite-svelte": "^1.33.1",
+    "tailwind-merge": "^3.6.0",
+    "tailwindcss": "^4.3.0"
   }
 }
