@@ -29,7 +29,7 @@ pkgs.mkShell {
     sqlc
 
     nodejs_latest
-    nodePackages.pnpm
+    pnpm_11
 
     sqlitebrowser
   ];
