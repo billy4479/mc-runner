@@ -8,7 +8,7 @@ buildGoModule (finalAttrs: {
   src = ./..;
   pname = "mc-runner";
   version = "1.0.0-${rev}";
-  vendorHash = "sha256-y7Ou8MvRERtYLt5kqPXD+gbzMMvTF7RuHHKyp4a/hZ8=";
+  vendorHash = "sha256-h1QcRSEIFwT7Vhonvjq8sQt7NBT8seTTaKXMDMA0nak=";
 
   buildInputes = [ frontend ];
   disallowedRequisites = [ frontend ];
